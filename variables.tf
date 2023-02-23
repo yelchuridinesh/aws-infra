@@ -52,3 +52,14 @@ variable "public_route_table_cidr" {
   type        = string
   description = "public route table CIDR for all ipv4"
 }
+
+variable "app_port"{
+  type        = number
+  description = "port number on which the application runs"
+  default     = 8000
+}
+
+variable "aws_ami"{
+  description = "ami values"
+  type        = string
+}
