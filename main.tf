@@ -22,10 +22,10 @@ resource "aws_vpc" "vpc_1" {
 # }
 
 resource "aws_subnet" "public_subnets_1" {
-  count             = length(data.aws_availability_zones.available.names) > 2 ? 3 : 2
-  cidr_block        = "${var.subnet_prefix_1}.${count.index + 1}.${var.subnet_suffix}"
-  vpc_id            = aws_vpc.vpc_1.id
-  availability_zone = data.aws_availability_zones.available.names[count.index]
+  count                   = length(data.aws_availability_zones.available.names) > 2 ? 3 : 2
+  cidr_block              = "${var.subnet_prefix_1}.${count.index + 1}.${var.subnet_suffix}"
+  vpc_id                  = aws_vpc.vpc_1.id
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = true
   tags = {
     Type = var.public_tag
@@ -188,21 +188,21 @@ resource "aws_security_group" "application" {
 
 #add an inbound rule
 resource "aws_security_group_rule" "rds_ingress" {
-  type        = "ingress"
-  from_port   = 3306
-  to_port     = 3306
-  protocol    = "tcp"
-  security_group_id = aws_security_group.database_security_group.id
+  type                     = "ingress"
+  from_port                = 3306
+  to_port                  = 3306
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.database_security_group.id
   source_security_group_id = aws_security_group.application.id
 }
 
 # Add an inbound rule to the EC2 security group to allow traffic to the RDS security group
 resource "aws_security_group_rule" "ec2_ingress" {
-  type        = "ingress"
-  from_port   = 3306
-  to_port     = 3306
-  protocol    = "tcp"
-  security_group_id = aws_security_group.application.id
+  type                     = "ingress"
+  from_port                = 3306
+  to_port                  = 3306
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.application.id
   source_security_group_id = aws_security_group.database_security_group.id
 }
 
@@ -219,12 +219,12 @@ resource "aws_security_group_rule" "rds_egress" {
 
 # Database security group
 
-resource "aws_security_group" "database_security_group"{
+resource "aws_security_group" "database_security_group" {
 
-  name_prefix ="my-database"
+  name_prefix = "my-database"
   vpc_id      = aws_vpc.vpc_1.id
 
-tags = {
+  tags = {
     Name = "Database security group"
   }
 
@@ -233,8 +233,8 @@ tags = {
 #subnet group for private subnets 
 
 resource "aws_db_subnet_group" "private_subnet_group" {
-  name       = "private_subnet_group_for_rds"
-  subnet_ids = [aws_subnet.private_subnets_1[0].id,aws_subnet.private_subnets_1[1].id]
+  name        = "private_subnet_group_for_rds"
+  subnet_ids  = [aws_subnet.private_subnets_1[0].id, aws_subnet.private_subnets_1[1].id]
   description = "subnet group for adding private subnets"
 }
 
@@ -260,10 +260,10 @@ resource "aws_db_parameter_group" "rds_parameter_group" {
 
 
 
-resource "aws_key_pair" "ec2keypair" {   
-  key_name   = "ec2kp"  
-   public_key = file("~/.ssh/ec2.pub")
-    }
+resource "aws_key_pair" "ec2keypair" {
+  key_name   = "ec2kp"
+  public_key = file("~/.ssh/ec2.pub")
+}
 
 # Create EC2 Instance
 
@@ -271,7 +271,7 @@ resource "random_uuid" "image_uuid" {}
 
 #S3 Bucket creation
 resource "aws_s3_bucket" "csyedineshbucket" {
-  bucket        = "csyedineshbucket-${random_uuid.image_uuid.result}"
+  bucket = "csyedineshbucket-${random_uuid.image_uuid.result}"
   # acl           = "private"
   force_destroy = true
 }
@@ -287,7 +287,7 @@ resource "aws_s3_bucket_public_access_block" "access_bucket" {
 
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "my_bucket_encryption" {
-  bucket     = aws_s3_bucket.csyedineshbucket.id
+  bucket = aws_s3_bucket.csyedineshbucket.id
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
@@ -296,10 +296,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "my_bucket_encrypt
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "my_bucket_lifecycle" {
-  bucket     = aws_s3_bucket.csyedineshbucket.id
+  bucket = aws_s3_bucket.csyedineshbucket.id
   rule {
-    id      = "transition-objects-to-standard-ia"
-    status  = "Enabled"
+    id     = "transition-objects-to-standard-ia"
+    status = "Enabled"
 
     transition {
       days          = 30
@@ -381,7 +381,7 @@ resource "aws_db_instance" "csye6225_rds" {
   multi_az               = false
   publicly_accessible    = false
   allocated_storage      = 20
-  skip_final_snapshot    = true 
+  skip_final_snapshot    = true
 
   tags = {
     Name = "WEBAPP RDS Instance"
@@ -400,9 +400,9 @@ resource "aws_instance" "EC2-CSYE6225" {
   }
   vpc_security_group_ids = [aws_security_group.application.id]
   subnet_id              = aws_subnet.public_subnets_1[0].id
-   key_name      = aws_key_pair.ec2keypair.key_name
-   iam_instance_profile   = aws_iam_instance_profile.s3_access_instance_profile.name
-   user_data              = <<EOF
+  key_name               = aws_key_pair.ec2keypair.key_name
+  iam_instance_profile   = aws_iam_instance_profile.s3_access_instance_profile.name
+  user_data              = <<EOF
 #!/bin/bash
 echo "[Unit]
 Description=Webapp Service
@@ -459,12 +459,12 @@ EOF
 #Create an Route53 record instance to connect EC2 ip address to the DNS
 
 data "aws_route53_zone" "underthecloud" {
-  name         =  var.aws_profile == "dev" ? "dev.underthecloud.me" : "prod.underthecloud.me"
+  name = var.aws_profile == "dev" ? "dev.underthecloud.me" : "prod.underthecloud.me"
 }
 
 resource "aws_route53_record" "example" {
   zone_id = data.aws_route53_zone.underthecloud.zone_id
-  name    = "${data.aws_route53_zone.underthecloud.name}"
+  name    = data.aws_route53_zone.underthecloud.name
   type    = "A"
   ttl     = "300"
   records = [aws_instance.EC2-CSYE6225.public_ip]
