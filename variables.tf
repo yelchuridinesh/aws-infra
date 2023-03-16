@@ -63,3 +63,8 @@ variable "aws_ami"{
   description = "ami values"
   type        = string
 }
+
+variable "rds_password"{
+  description = "rds password"
+  type        = string
+}

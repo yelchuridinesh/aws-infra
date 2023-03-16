@@ -375,7 +375,7 @@ resource "aws_db_instance" "csye6225_rds" {
   instance_class         = "db.t3.micro"
   db_name                = "csye6225"
   username               = "csye6225"
-  password               = "Tendu#1997"
+  password               = var.rds_password
   db_subnet_group_name   = aws_db_subnet_group.private_subnet_group.name
   vpc_security_group_ids = [aws_security_group.database_security_group.id]
   multi_az               = false
@@ -455,6 +455,20 @@ EOF
 #     Name = "WEBAPP RDS Instance"
 #   }
 # }
+
+#Create an Route53 record instance to connect EC2 ip address to the DNS
+
+data "aws_route53_zone" "underthecloud" {
+  name         =  var.aws_profile == "dev" ? "dev.underthecloud.me" : "prod.underthecloud.me"
+}
+
+resource "aws_route53_record" "example" {
+  zone_id = data.aws_route53_zone.underthecloud.zone_id
+  name    = "${data.aws_route53_zone.underthecloud.name}"
+  type    = "A"
+  ttl     = "300"
+  records = [aws_instance.EC2-CSYE6225.public_ip]
+}
 
 
 
