@@ -361,10 +361,22 @@ resource "aws_iam_policy" "s3_access_policy" {
     }
   )
 }
+
+resource "aws_iam_policy_attachment" "web-app-atach-cloudwatch" {
+  name       = "attach-cloudwatch-server-policy-ec2"
+  roles      = [aws_iam_role.s3_access_role.name]
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
+ 
+
+
 resource "aws_iam_role_policy_attachment" "s3_access_role_policy_attachment" {
   policy_arn = aws_iam_policy.s3_access_policy.arn
   role       = aws_iam_role.s3_access_role.name
 }
+
+
 
 # Create an RDS Instance
 
@@ -426,6 +438,7 @@ WantedBy=multi-user.target" > /etc/systemd/system/webapp.service
 sudo systemctl daemon-reload
 sudo systemctl restart webapp.service
 sudo systemctl enable webapp.service
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json
 EOF
 
 
