@@ -53,18 +53,18 @@ variable "public_route_table_cidr" {
   description = "public route table CIDR for all ipv4"
 }
 
-variable "app_port"{
+variable "app_port" {
   type        = number
   description = "port number on which the application runs"
   default     = 8000
 }
 
-variable "aws_ami"{
+variable "aws_ami" {
   description = "ami values"
   type        = string
 }
 
-variable "rds_password"{
+variable "rds_password" {
   description = "rds password"
   type        = string
 }
