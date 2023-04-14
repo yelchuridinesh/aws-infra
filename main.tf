@@ -333,6 +333,8 @@ resource "aws_launch_template" "EC2-CSYE6225" {
       volume_size           = 50
       volume_type           = "gp2"
       delete_on_termination = true
+      encrypted =             true
+      kms_key_id =  aws_kms_key.ebs_custom_key.arn
     }
   }
 
@@ -384,6 +386,7 @@ resource "aws_autoscaling_group" "webapp_autoscaling_group" {
   # launch_configuration = aws_launch_template.EC2-CSYE6225.name
   launch_template {
     id = aws_launch_template.EC2-CSYE6225.id
+    version = "$Latest"
   }
   vpc_zone_identifier = [aws_subnet.public_subnets_1[0].id]
   target_group_arns   = [aws_lb_target_group.load_balancer_target_group.arn]
@@ -460,6 +463,103 @@ resource "aws_cloudwatch_metric_alarm" "low_cpu_alarm" {
   }
 }
 
+#KMS_KEY for EBS
+# resource "aws_kms_key" "ebs_custom_key" {
+#   description = "EBS Key"
+#   policy = jsonencode({
+#     Id = "ebskeypolicy"
+#     Statement = [
+#       {
+#         Action = "kms:*"
+#         Effect = "Allow"
+#         Principal = {
+#           AWS = "*"
+#         }
+ 
+#         Resource = "*"
+#         Sid      = "Enable IAM User Permissions"
+#       },
+#     ]
+#     Version = "2012-10-17"
+#   })
+# }
+
+data "aws_caller_identity" "current" { }
+
+resource "aws_kms_key" "ebs_custom_key" {
+  description             = "Symmetric customer-managed KMS key for EBS"
+  deletion_window_in_days = 10
+  policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [{
+      "Sid" : "Enable IAM User Permissions",
+      "Effect" : "Allow",
+      "Principal" : {
+        "AWS" : "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+      },
+      "Action" : "kms:*",
+      "Resource" : "*"
+      },
+      {
+        "Sid" : "Allow service-linked role use of the customer managed key",
+        "Effect" : "Allow",
+        "Principal" : {
+          "AWS" : [
+            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling"
+          ]
+        },
+        "Action" : [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey"
+        ],
+        "Resource" : "*"
+      },
+      {
+        "Sid": "Allow attachment of persistent resources",
+        "Effect": "Allow",
+        "Principal": {
+          "AWS": [
+            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling"
+          ]
+        },
+        "Action": [
+          "kms:CreateGrant"
+        ],
+        "Resource": "*",
+        "Condition": {
+          "Bool": {
+            "kms:GrantIsForAWSResource": true
+          }
+        }
+     }
+]}
+)
+}
+ 
+#  kms_key for RDS
+resource "aws_kms_key" "rds_custom_key" {
+  description = "Encrypting RDS instance"
+   policy = jsonencode({
+    Id = "ebskeypolicy"
+    Statement = [
+      {
+        Action = "kms:*"
+        Effect = "Allow"
+        Principal = {
+          AWS = "*"
+        }
+ 
+        Resource = "*"
+        Sid      = "Enable IAM User Permissions"
+      },
+    ]
+    Version = "2012-10-17"
+  })
+}
+
 resource "aws_lb" "load_balancer" {
   name               = "webapp-load-balancer"
   internal           = false
@@ -474,17 +574,22 @@ resource "aws_lb" "load_balancer" {
   enable_deletion_protection = false
 }
 
+data aws_acm_certificate "certificate"{
+  domain =var.domain_name
+  statuses = [ "ISSUED" ]
+}
+
 resource "aws_lb_listener" "webapp_listener" {
   load_balancer_arn = aws_lb.load_balancer.arn
-  port              = 80
-  protocol          = "HTTP"
+  port              = 443
+  protocol          = "HTTPS"
+  certificate_arn = data.aws_acm_certificate.certificate.arn
 
   default_action {
     target_group_arn = aws_lb_target_group.load_balancer_target_group.arn
     type             = "forward"
   }
 }
-
 
 resource "aws_lb_target_group" "load_balancer_target_group" {
   name_prefix = "EC2TG"
@@ -728,6 +833,8 @@ resource "aws_db_instance" "csye6225_rds" {
   publicly_accessible    = false
   allocated_storage      = 20
   skip_final_snapshot    = true
+  storage_encrypted = true
+  kms_key_id = aws_kms_key.rds_custom_key.arn
 
   tags = {
     Name = "WEBAPP RDS Instance"
