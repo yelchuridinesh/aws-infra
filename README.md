@@ -23,3 +23,9 @@ To delete the infrastructure created by this code, run `terraform destroy` after
 
 *Note*: This code was last tested with Terraform version 1.1.4 and AWS provider version 3.59.0.
 
+## Certificate Import
+
+Command to import the Certificate
+
+`aws acm import-certificate --certificate file://certificate.crt --certificate-chain file://CertificateChain.pem --private-key file://Private.key`
+
